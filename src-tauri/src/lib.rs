@@ -1,12 +1,62 @@
+mod github;
+
+use github::{apply_following_filter, validate_date, GitHubClient, SearchCriteria, User};
+use tauri::State;
+
+struct AppState {
+  github: GitHubClient,
+}
+
 #[tauri::command]
-fn greet(name: &str) -> String {
-  format!("Hello, {}! You've been greeted from Rust!", name)
+async fn search_users(
+  state: State<'_, AppState>,
+  criteria: SearchCriteria,
+) -> Result<github::SearchUsersResult, String> {
+  if let Some(date) = &criteria.last_activity_after {
+    validate_date(date).map_err(|e| e.to_string())?;
+  }
+
+  let mut result = state
+    .github
+    .search_users(&criteria)
+    .await
+    .map_err(|e| e.to_string())?;
+
+  result.users = apply_following_filter(
+    result.users,
+    criteria.min_following,
+    criteria.max_following,
+  );
+
+  Ok(result)
+}
+
+#[tauri::command]
+async fn get_user(state: State<'_, AppState>, login: String) -> Result<User, String> {
+  state.github.get_user(&login).await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn is_authenticated(state: State<'_, AppState>) -> bool {
+  state.github.is_authenticated()
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+  let token = std::env::var("GITHUB_TOKEN").ok();
+  if token.is_none() {
+    log::warn!("GITHUB_TOKEN not set, running in anonymous mode (rate limits: 10 req/min search)");
+  }
+
   tauri::Builder::default()
-    .invoke_handler(tauri::generate_handler![greet])
+    .manage(AppState {
+      github: GitHubClient::new(token),
+    })
+    .invoke_handler(tauri::generate_handler![
+      search_users,
+      get_user,
+      is_authenticated
+    ])
     .setup(|app| {
       if cfg!(debug_assertions) {
         app.handle().plugin(

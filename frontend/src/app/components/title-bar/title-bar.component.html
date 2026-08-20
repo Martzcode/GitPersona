@@ -1,0 +1,61 @@
+<div class="title-bar" data-tauri-drag-region="deep">
+  <div class="drag-region" [class.maximized]="isMaximized()">
+    <div class="title-bar-left">
+      <div class="app-icon" (click)="showAppMenu($event)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+        </svg>
+      </div>
+      <span class="app-title">{{ appName() }}</span>
+    </div>
+
+    <div class="title-bar-center">
+      <nav class="menu-bar" role="menubar">
+        @for (menu of menus(); track menu.label) {
+          <div class="menu-item" role="menuitem" (click)="toggleMenu($event, menu)" (keydown.enter)="toggleMenu($event, menu)" tabindex="0">
+            {{ menu.label }}
+            @if (menu.items && menu.items.length > 0) {
+              <div class="dropdown" [class.open]="menu.open">
+                @for (item of menu.items; track item.label) {
+                  @if (item.type === 'separator') {
+                    <hr class="separator" />
+                  } @else {
+                    <button class="dropdown-item" role="menuitem" (click)="onMenuItemClick(item)">
+                      {{ item.label }}
+                    </button>
+                  }
+                }
+              </div>
+            }
+          </div>
+        }
+      </nav>
+    </div>
+
+    <div class="title-bar-right">
+      <div class="window-controls">
+        <button class="control-btn minimize" (click)="minimize()" title="Réduire" aria-label="Réduire">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+        </button>
+        <button class="control-btn maximize" (click)="toggleMaximize()" [title]="isMaximized() ? 'Restaurer' : 'Agrandir'" [aria-label]="isMaximized() ? 'Restaurer' : 'Agrandir'">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            @if (!isMaximized()) {
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+            } @else {
+              <rect x="3" y="3" width="9" height="9" rx="2" />
+              <rect x="12" y="12" width="9" height="9" rx="2" />
+            }
+          </svg>
+        </button>
+        <button class="control-btn close" (click)="close()" title="Fermer" aria-label="Fermer">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

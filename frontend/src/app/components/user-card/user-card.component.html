@@ -1,0 +1,51 @@
+<article class="user-card" (click)="view.emit(user())">
+  <img
+    [src]="user().avatar_url"
+    [alt]="'Avatar de ' + user().login"
+    class="avatar"
+    loading="lazy"
+  />
+
+  <div class="info">
+    <h3 class="login">{{ user().login }}</h3>
+    @if (user().name) {
+      <p class="name">{{ user().name }}</p>
+    }
+    @if (user().location) {
+      <p class="location">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+          <circle cx="12" cy="10" r="3" />
+        </svg>
+        {{ user().location }}
+      </p>
+    }
+  </div>
+
+  @if (user().id !== 0) {
+    <div class="stats">
+      <div class="stat">
+        <span class="stat-value">{{ formatNumber(user().public_repos) }}</span>
+        <span class="stat-label">repos</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value">{{ formatNumber(user().followers) }}</span>
+        <span class="stat-label">followers</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value">{{ formatNumber(user().following) }}</span>
+        <span class="stat-label">following</span>
+      </div>
+    </div>
+
+    <p class="activity">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10" />
+        <polyline points="12 6 12 12 16 14" />
+      </svg>
+      Dernière activité : {{ lastActivity() }}
+    </p>
+  } @else {
+    <p class="activity">Détails indisponibles (rate limit)</p>
+  }
+</article>
