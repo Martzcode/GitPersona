@@ -12,8 +12,21 @@
 /package-lock.json
 /yarn.lock
 
+# Frontend
+frontend/node_modules/
+frontend/package-lock.json
+frontend/yarn.lock
+frontend/dist/
+
+# Tauri / Rust
+/target/
+/src-tauri/target/
+/src-tauri/Cargo.lock
+/src-tauri/.cargo/
+
 # Environment files
 /.env
+/frontend/.env
 
 # Angular CLI and build artefacts
 /.angular-cli.json
@@ -26,3 +39,6 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Tauri bundle
+/src-tauri/bundle/

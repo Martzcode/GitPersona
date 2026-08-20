@@ -1,0 +1,14 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 2rem;
+  font-family: system-ui, sans-serif;
+}
+
+input,
+button {
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+}

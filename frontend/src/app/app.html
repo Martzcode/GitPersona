@@ -1,0 +1,12 @@
+<main>
+  <h1>{{ title() }}</h1>
+
+  <input
+    [(ngModel)]="name"
+    placeholder="Ton nom"
+  />
+
+  <button type="button" (click)="greet()">Appeler Rust</button>
+
+  <p>{{ message() }}</p>
+</main>
