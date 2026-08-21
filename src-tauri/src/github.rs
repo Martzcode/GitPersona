@@ -1,10 +1,16 @@
 use anyhow::{anyhow, Context, Result};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use std::time::Duration;
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, Semaphore};
 
 const API_BASE: &str = "https://api.github.com";
+const GRAPHQL_URL: &str = "https://api.github.com/graphql";
 const SEARCH_MIN_INTERVAL: Duration = Duration::from_millis(2100);
+const CONCURRENCY_WITH_TOKEN: usize = 8;
+const CONCURRENCY_ANONYMOUS: usize = 4;
 
 pub struct GitHubClient {
   http: reqwest::Client,
@@ -25,6 +31,8 @@ pub struct SearchCriteria {
   pub last_activity_after: Option<String>,
   pub per_page: Option<u32>,
   pub page: Option<u32>,
+  #[serde(default)]
+  pub cursor: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -33,6 +41,8 @@ pub struct SearchUsersResult {
   pub users: Vec<User>,
   pub remaining: Option<u32>,
   pub partial: bool,
+  pub end_cursor: Option<String>,
+  pub has_next: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -58,7 +68,7 @@ struct SearchResponse {
   items: Vec<SearchItem>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 struct SearchItem {
   login: String,
   avatar_url: String,
@@ -80,6 +90,135 @@ struct RawUser {
   pushed_at: Option<String>,
   created_at: Option<String>,
   company: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct RateLimitResponse {
+  resources: RateLimitResources,
+}
+
+#[derive(Debug, Deserialize)]
+struct RateLimitResources {
+  core: RateLimitCore,
+}
+
+#[derive(Debug, Deserialize)]
+struct RateLimitCore {
+  remaining: u32,
+}
+
+// --- GraphQL ---
+
+const GRAPHQL_QUERY: &str = r#"
+query($q: String!, $first: Int!, $after: String) {
+  search(query: $q, type: USER, first: $first, after: $after) {
+    userCount
+    pageInfo { endCursor hasNextPage }
+    edges {
+      node {
+        ... on User {
+          login
+          databaseId
+          avatarUrl
+          url
+          name
+          bio
+          company
+          location
+          createdAt
+          followers { totalCount }
+          following { totalCount }
+          repositories(privacy: PUBLIC, first: 1, orderBy: {field: PUSHED_AT, direction: DESC}) {
+            totalCount
+            nodes { pushedAt }
+          }
+        }
+      }
+    }
+  }
+}
+"#;
+
+#[derive(Debug, Deserialize)]
+struct GqlResponse {
+  data: Option<GqlData>,
+  errors: Option<Vec<GqlError>>,
+}
+
+#[derive(Debug, Deserialize)]
+struct GqlError {
+  message: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct GqlData {
+  search: Option<GqlSearch>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct GqlSearch {
+  user_count: u64,
+  page_info: GqlPageInfo,
+  #[serde(default)]
+  edges: Vec<GqlEdge>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct GqlPageInfo {
+  end_cursor: Option<String>,
+  has_next_page: bool,
+}
+
+#[derive(Debug, Deserialize)]
+struct GqlEdge {
+  node: serde_json::Value,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct GqlUser {
+  login: String,
+  database_id: Option<u64>,
+  avatar_url: String,
+  url: String,
+  name: Option<String>,
+  bio: Option<String>,
+  company: Option<String>,
+  location: Option<String>,
+  created_at: Option<String>,
+  followers: Option<GqlCount>,
+  following: Option<GqlCount>,
+  repositories: Option<GqlRepos>,
+}
+
+#[derive(Debug, Deserialize)]
+struct GqlCount {
+  total_count: u32,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct GqlRepos {
+  total_count: u32,
+  #[serde(default)]
+  nodes: Vec<GqlRepoNode>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct GqlRepoNode {
+  pushed_at: Option<String>,
+}
+
+// --- Erreurs de fetch de profil ---
+
+#[derive(Debug)]
+enum ProfileError {
+  Skipped,
+  RateLimited,
+  Other,
 }
 
 impl GitHubClient {
@@ -115,9 +254,127 @@ impl GitHubClient {
     Ok(())
   }
 
+  fn rate_limit_error(&self, status: reqwest::StatusCode, context: &str) -> anyhow::Error {
+    if status == reqwest::StatusCode::FORBIDDEN || status == reqwest::StatusCode::TOO_MANY_REQUESTS
+    {
+      anyhow!(
+        "API GitHub saturée (rate limit). {} : attendez un peu ou définissez GITHUB_TOKEN.",
+        if self.token.is_none() {
+          "Mode anonyme actif (60 req/h)"
+        } else {
+          "Token actif"
+        }
+      )
+    } else {
+      anyhow!("{context} (HTTP {})", status.as_u16())
+    }
+  }
+
+  /// Recherche : GraphQL si token (1 requête/page), sinon REST N+1 budget-aware.
   pub async fn search_users(&self, criteria: &SearchCriteria) -> Result<SearchUsersResult> {
     self.wait_search_slot().await?;
 
+    if self.token.is_some() {
+      match self.search_graphql(criteria).await {
+        Ok(result) => return Ok(result),
+        Err(e) => log::warn!("GraphQL search failed ({e:#}); falling back to REST"),
+      }
+    }
+
+    self.search_rest(criteria).await
+  }
+
+  async fn search_graphql(&self, criteria: &SearchCriteria) -> Result<SearchUsersResult> {
+    let token = self
+      .token
+      .as_ref()
+      .ok_or_else(|| anyhow!("token requis pour GraphQL"))?;
+
+    let body = serde_json::json!({
+      "query": GRAPHQL_QUERY,
+      "variables": {
+        "q": build_query(criteria),
+        "first": criteria.per_page.unwrap_or(30).clamp(1, 100),
+        "after": criteria.cursor,
+      }
+    });
+
+    let resp = self
+      .http
+      .post(GRAPHQL_URL)
+      .bearer_auth(token)
+      .json(&body)
+      .send()
+      .await
+      .context("requête GraphQL échouée")?;
+
+    let status = resp.status();
+    let remaining = resp
+      .headers()
+      .get("x-ratelimit-remaining")
+      .and_then(|v| v.to_str().ok())
+      .and_then(|v| v.parse::<u32>().ok());
+
+    let raw = resp.bytes().await.context("corps GraphQL illisible")?;
+    if !status.is_success() {
+      return Err(self.rate_limit_error(status, "requête GraphQL refusée"));
+    }
+
+    let payload: GqlResponse = serde_json::from_slice(&raw).context("réponse GraphQL invalide")?;
+
+    if let Some(errors) = &payload.errors {
+      let has_data = payload.data.as_ref().and_then(|d| d.search.as_ref()).is_some();
+      if !has_data {
+        let msg = errors
+          .iter()
+          .map(|e| e.message.clone())
+          .collect::<Vec<_>>()
+          .join("; ");
+        return Err(anyhow!("GraphQL: {msg}"));
+      }
+    }
+
+    let data = payload.data.ok_or_else(|| anyhow!("GraphQL: réponse vide"))?;
+    let search = data
+      .search
+      .ok_or_else(|| anyhow!("GraphQL: champ search absent"))?;
+
+    let mut users = Vec::with_capacity(search.edges.len());
+    for edge in search.edges {
+      match serde_json::from_value::<GqlUser>(edge.node) {
+        Ok(u) => users.push(User {
+          id: u.database_id.unwrap_or(0),
+          login: u.login,
+          avatar_url: u.avatar_url,
+          html_url: u.url,
+          name: u.name,
+          bio: u.bio,
+          location: u.location,
+          company: u.company,
+          created_at: u.created_at,
+          public_repos: u.repositories.as_ref().map_or(0, |r| r.total_count),
+          followers: u.followers.map_or(0, |f| f.total_count),
+          following: u.following.map_or(0, |f| f.total_count),
+          pushed_at: u
+            .repositories
+            .and_then(|r| r.nodes.into_iter().next())
+            .and_then(|n| n.pushed_at),
+        }),
+        Err(_) => continue,
+      }
+    }
+
+    Ok(SearchUsersResult {
+      total_count: search.user_count,
+      has_next: search.page_info.has_next_page,
+      end_cursor: search.page_info.end_cursor,
+      users,
+      remaining,
+      partial: false,
+    })
+  }
+
+  async fn search_rest(&self, criteria: &SearchCriteria) -> Result<SearchUsersResult> {
     let query = build_query(criteria);
     let mut per_page = criteria.per_page.unwrap_or(30).clamp(1, 100);
     if self.token.is_none() {
@@ -142,21 +399,12 @@ impl GitHubClient {
       .await
       .context("search request failed")?
       .error_for_status()
-      .map_err(|e| {
-        if let Some(status) = e.status() {
-          if status == reqwest::StatusCode::FORBIDDEN
-            || status == reqwest::StatusCode::TOO_MANY_REQUESTS
-          {
-            anyhow!("API GitHub saturé (rate limit). {} : attendez ~1h ou définissez GITHUB_TOKEN.", if self.token.is_none() { "Mode anonyme actif (60 req/h)" } else { "Token actif" })
-          } else {
-            anyhow!("erreur GitHub ({}): {e}", status.as_u16())
-          }
-        } else {
-          anyhow!("erreur réseau : {e}")
-        }
+      .map_err(|e| match e.status() {
+        Some(status) => self.rate_limit_error(status, "erreur recherche"),
+        None => anyhow!("erreur réseau : {e}"),
       })?;
 
-    let remaining = resp
+    let search_remaining = resp
       .headers()
       .get("x-ratelimit-remaining")
       .and_then(|v| v.to_str().ok())
@@ -164,40 +412,47 @@ impl GitHubClient {
 
     let search: SearchResponse = resp.json().await.context("failed to parse search response")?;
 
-    let users = match self.fetch_users(&search.items).await {
-      Ok(users) => users,
-      Err(e) => {
-        log::warn!("profile fetch failed, returning partial results: {e}");
-        search
-          .items
-          .into_iter()
-          .map(|item| User {
-            login: item.login,
-            id: 0,
-            avatar_url: item.avatar_url,
-            html_url: item.html_url,
-            name: None,
-            bio: None,
-            location: None,
-            public_repos: 0,
-            followers: 0,
-            following: 0,
-            pushed_at: None,
-            created_at: None,
-            company: None,
-          })
-          .collect()
+    // Le quota pertinent pour les profils est le quota CORE, pas SEARCH.
+    // GET /rate_limit est gratuit (ne consomme rien).
+    let core_remaining = self.core_rate_limit_remaining().await;
+
+    let budget = core_remaining
+      .map(|r| r.saturating_sub(1) as usize)
+      .unwrap_or(search.items.len())
+      .min(search.items.len());
+
+    let fetched = self.fetch_profiles(&search.items[..budget]).await;
+
+    let mut users = Vec::with_capacity(search.items.len());
+    for item in &search.items {
+      if let Some(u) = fetched.get(&item.login) {
+        users.push(u.clone());
+      } else {
+        users.push(basic_user(item));
       }
-    };
+    }
 
     let partial = users.iter().any(|u| u.id == 0);
+    let has_next = u64::from(page) * u64::from(per_page) < search.total_count && !users.is_empty();
 
     Ok(SearchUsersResult {
       total_count: search.total_count,
       users,
-      remaining,
+      remaining: search_remaining,
       partial,
+      end_cursor: None,
+      has_next,
     })
+  }
+
+  async fn core_rate_limit_remaining(&self) -> Option<u32> {
+    let mut req = self.http.get(format!("{API_BASE}/rate_limit"));
+    if let Some(token) = &self.token {
+      req = req.bearer_auth(token);
+    }
+    let resp = req.send().await.ok()?;
+    let rl: RateLimitResponse = resp.json().await.ok()?;
+    Some(rl.resources.core.remaining)
   }
 
   pub async fn get_user(&self, login: &str) -> Result<User> {
@@ -210,77 +465,103 @@ impl GitHubClient {
       .await
       .context("user request failed")?
       .error_for_status()
-      .map_err(|e| {
-        if let Some(status) = e.status() {
-          if status == reqwest::StatusCode::FORBIDDEN
-            || status == reqwest::StatusCode::TOO_MANY_REQUESTS
-          {
-            anyhow!("API GitHub saturé (rate limit). {} : attendez ~1h ou définissez GITHUB_TOKEN.", if self.token.is_none() { "Mode anonyme actif (60 req/h)" } else { "Token actif" })
-          } else {
-            anyhow!("erreur GitHub ({}): {e}", status.as_u16())
-          }
-        } else {
-          anyhow!("erreur réseau : {e}")
-        }
+      .map_err(|e| match e.status() {
+        Some(status) => self.rate_limit_error(status, "erreur profil"),
+        None => anyhow!("erreur réseau : {e}"),
       })?;
     let raw: RawUser = resp.json().await.context("failed to parse user response")?;
     Ok(raw.into())
   }
 
-  async fn fetch_users(&self, items: &[SearchItem]) -> Result<Vec<User>> {
+  /// Récupère les profils avec concurrence limitée et arrêt immédiat en cas
+  /// de rate limit (évite les rate limits secondaires de GitHub).
+  async fn fetch_profiles(&self, items: &[SearchItem]) -> HashMap<String, User> {
+    let concurrency = if self.token.is_some() {
+      CONCURRENCY_WITH_TOKEN
+    } else {
+      CONCURRENCY_ANONYMOUS
+    };
+
+    let semaphore = Arc::new(Semaphore::new(concurrency));
+    let aborted = Arc::new(AtomicBool::new(false));
     let http = self.http.clone();
     let token = self.token.clone();
+
     let mut tasks = tokio::task::JoinSet::new();
     for item in items {
       let login = item.login.clone();
       let http = http.clone();
       let token = token.clone();
+      let sem = semaphore.clone();
+      let aborted = aborted.clone();
+
       tasks.spawn(async move {
+        if aborted.load(Ordering::Relaxed) {
+          return (login, Err(ProfileError::Skipped));
+        }
+        let permit = sem.acquire_owned().await;
+        if aborted.load(Ordering::Relaxed) {
+          drop(permit.ok());
+          return (login, Err(ProfileError::Skipped));
+        }
+
         let mut req = http.get(format!("{API_BASE}/users/{login}"));
         if let Some(token) = &token {
           req = req.bearer_auth(token);
         }
-        let resp = req
-          .send()
-          .await
-          .context("user request failed")?
-          .error_for_status()
-          .context("user request error")?;
-        let raw: RawUser = resp.json().await.context("failed to parse user")?;
-        Ok::<User, anyhow::Error>(raw.into())
+
+        let result = match req.send().await {
+          Ok(resp) if resp.status().is_success() => match resp.json::<RawUser>().await {
+            Ok(raw) => Ok(raw.into()),
+            Err(_) => Err(ProfileError::Other),
+          },
+          Ok(resp) if resp.status() == reqwest::StatusCode::FORBIDDEN => {
+            aborted.store(true, Ordering::Relaxed);
+            Err(ProfileError::RateLimited)
+          }
+          Ok(resp) if resp.status() == reqwest::StatusCode::TOO_MANY_REQUESTS => {
+            aborted.store(true, Ordering::Relaxed);
+            Err(ProfileError::RateLimited)
+          }
+          Ok(_) => Err(ProfileError::Other),
+          Err(_) => Err(ProfileError::Other),
+        };
+
+        drop(permit);
+        (login, result)
       });
     }
 
-    let mut users = Vec::with_capacity(items.len());
-    let mut failures = 0usize;
+    let mut map = HashMap::with_capacity(items.len());
     while let Some(res) = tasks.join_next().await {
-      match res {
-        Ok(Ok(user)) => users.push(user),
-        Ok(Err(e)) => {
-          failures += 1;
-          log::warn!("failed to fetch user: {e}");
-        }
-        Err(e) => {
-          failures += 1;
-          log::warn!("task error: {e}");
-        }
+      if let Ok((login, Ok(user))) = res {
+        map.insert(login, user);
       }
     }
 
-    if failures > 0 && failures * 2 >= items.len() {
-      return Err(anyhow!(
-        "la majorité des profils n'a pas pu être chargée ({} sur {}). Le rate limit de l'API GitHub est probablement atteint. {}",
-        failures,
-        items.len(),
-        if self.token.is_none() {
-          "Mode anonyme : 60 req/h seulement. Définissez GITHUB_TOKEN."
-        } else {
-          "Réessayez dans quelques minutes."
-        }
-      ));
+    if aborted.load(Ordering::Relaxed) {
+      log::warn!("fetch des profils interrompu : rate limit atteint");
     }
 
-    Ok(users)
+    map
+  }
+}
+
+fn basic_user(item: &SearchItem) -> User {
+  User {
+    login: item.login.clone(),
+    id: 0,
+    avatar_url: item.avatar_url.clone(),
+    html_url: item.html_url.clone(),
+    name: None,
+    bio: None,
+    location: None,
+    public_repos: 0,
+    followers: 0,
+    following: 0,
+    pushed_at: None,
+    created_at: None,
+    company: None,
   }
 }
 
@@ -330,11 +611,7 @@ fn build_query(criteria: &SearchCriteria) -> String {
     }
   }
 
-  if parts.is_empty() {
-    parts.push("type:user".to_string());
-  } else {
-    parts.push("type:user".to_string());
-  }
+  parts.push("type:user".to_string());
 
   parts.join(" ")
 }
@@ -355,12 +632,8 @@ pub fn validate_date(date: &str) -> Result<()> {
   if date.is_empty() {
     return Ok(());
   }
-  let valid = date
-    .parse::<chrono::NaiveDate>()
-    .is_ok()
-    || date
-      .parse::<chrono::DateTime<chrono::Utc>>()
-      .is_ok();
+  let valid =
+    date.parse::<chrono::NaiveDate>().is_ok() || date.parse::<chrono::DateTime<chrono::Utc>>().is_ok();
   if !valid {
     return Err(anyhow!("invalid date format: {date} (expected YYYY-MM-DD)"));
   }

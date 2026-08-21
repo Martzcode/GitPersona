@@ -39,11 +39,15 @@ export class App {
   protected readonly page = signal(1);
   protected readonly selectedUser = signal<User | null>(null);
   protected readonly detailLoading = signal(false);
+  private readonly cursors: (string | undefined)[] = [];
 
   constructor(readonly github: GithubService) {}
 
   protected async search(resetPage = true): Promise<void> {
-    if (resetPage) this.page.set(1);
+    if (resetPage) {
+      this.page.set(1);
+      this.cursors.length = 0;
+    }
     this.loading.set(true);
     this.error.set(null);
     this.selectedUser.set(null);
@@ -64,10 +68,15 @@ export class App {
       last_activity_after: this.form.last_activity_after || undefined,
       per_page: 30,
       page: this.page(),
+      cursor: this.page() > 1 ? this.cursors[this.page() - 2] : undefined,
     };
 
     try {
-      this.result.set(await this.github.searchUsers(criteria));
+      const result = await this.github.searchUsers(criteria);
+      if (result.end_cursor) {
+        this.cursors[this.page() - 1] = result.end_cursor;
+      }
+      this.result.set(result);
     } catch (e) {
       this.error.set(String(e));
     } finally {

@@ -71,11 +71,11 @@
         }
       </p>
 
-      @if (result.total_count > 30) {
+      @if (result.has_next || page() > 1) {
         <div class="pagination">
           <button (click)="previousPage()" [disabled]="page() <= 1 || loading()">← Précédent</button>
           <span>Page {{ page() }}</span>
-          <button (click)="nextPage()" [disabled]="page() * 30 >= result.total_count || loading()">Suivant →</button>
+          <button (click)="nextPage()" [disabled]="!result.has_next || loading()">Suivant →</button>
         </div>
       }
     </div>

@@ -12,6 +12,7 @@ export interface SearchCriteria {
   last_activity_after?: string;
   per_page?: number;
   page?: number;
+  cursor?: string;
 }
 
 export interface User {
@@ -35,6 +36,8 @@ export interface SearchUsersResult {
   users: User[];
   remaining: number | null;
   partial: boolean;
+  end_cursor: string | null;
+  has_next: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
