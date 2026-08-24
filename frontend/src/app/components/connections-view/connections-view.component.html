@@ -1,0 +1,47 @@
+<h1>{{ title() }}</h1>
+
+@if (subtitle()) {
+  <p class="subtitle">{{ subtitle() }}</p>
+}
+
+@if (!github.authenticated() && !github.checkingAuth()) {
+  <p class="auth-status warning">
+    ⚠ Cette vue nécessite un token GitHub. Définis la variable
+    d'environnement <code>GITHUB_TOKEN</code> et relance l'application.
+  </p>
+}
+
+@if (error()) {
+  <p class="error">{{ error() }}</p>
+}
+
+@if (loading()) {
+  <div class="loading">
+    <div class="spinner"></div>
+    <p>Chargement des relations…</p>
+  </div>
+} @else if (users(); as users) {
+  <div class="results-header">
+    <p>{{ users.length }} personne(s)</p>
+  </div>
+
+  @if (users.length === 0) {
+    @if (tab() === 'management') {
+      <p class="empty">Tout le monde vous suit en retour. 🎉</p>
+    } @else {
+      <p class="empty">Aucune personne trouvée.</p>
+    }
+  } @else {
+    <ul class="people-list">
+      @for (user of users; track user.id) {
+        <li class="person">
+          <img [src]="user.avatar_url" [alt]="'Avatar de ' + user.login" class="avatar" loading="lazy" />
+          <div class="person-info">
+            <span class="login">{{ user.login }}</span>
+            <a [href]="user.html_url" target="_blank" rel="noopener" class="profile-link">Voir le profil ↗</a>
+          </div>
+        </li>
+      }
+    </ul>
+  }
+}

@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Context, Result};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
@@ -90,6 +90,33 @@ struct RawUser {
   pushed_at: Option<String>,
   created_at: Option<String>,
   company: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct RawSimpleUser {
+  login: String,
+  id: u64,
+  avatar_url: String,
+  html_url: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct SimpleUser {
+  pub login: String,
+  pub id: u64,
+  pub avatar_url: String,
+  pub html_url: String,
+}
+
+impl From<RawSimpleUser> for SimpleUser {
+  fn from(raw: RawSimpleUser) -> Self {
+    Self {
+      login: raw.login,
+      id: raw.id,
+      avatar_url: raw.avatar_url,
+      html_url: raw.html_url,
+    }
+  }
 }
 
 #[derive(Debug, Deserialize)]
@@ -239,6 +266,84 @@ impl GitHubClient {
 
   pub fn is_authenticated(&self) -> bool {
     self.token.is_some()
+  }
+
+  fn auth_get(&self, path: &str) -> reqwest::RequestBuilder {
+    let mut req = self.http.get(format!("{API_BASE}{path}"));
+    if let Some(token) = &self.token {
+      req = req.bearer_auth(token);
+    }
+    req
+  }
+
+  /// Profil de l'utilisateur authentifié (requiert un token).
+  pub async fn get_authenticated_user(&self) -> Result<SimpleUser> {
+    let resp = self
+      .auth_get("/user")
+      .send()
+      .await
+      .context("authenticated user request failed")?
+      .error_for_status()
+      .map_err(|e| match e.status() {
+        Some(status) => self.rate_limit_error(status, "erreur profil authentifié"),
+        None => anyhow!("erreur réseau : {e}"),
+      })?;
+    let raw: RawSimpleUser = resp
+      .json()
+      .await
+      .context("failed to parse authenticated user")?;
+    Ok(raw.into())
+  }
+
+  /// Liste paginée complète (100/page) d'une route de relations.
+  async fn list_all(&self, path: &str) -> Result<Vec<SimpleUser>> {
+    let mut all = Vec::new();
+    let mut page = 1u32;
+    loop {
+      let page_str = page.to_string();
+      let resp = self
+        .auth_get(path)
+        .query(&[("per_page", "100"), ("page", page_str.as_str())])
+        .send()
+        .await
+        .with_context(|| format!("request failed for {path} (page {page})"))?
+        .error_for_status()
+        .map_err(|e| match e.status() {
+          Some(status) => self.rate_limit_error(status, "erreur liste relations"),
+          None => anyhow!("erreur réseau : {e}"),
+        })?;
+      let users: Vec<RawSimpleUser> = resp
+        .json()
+        .await
+        .context("failed to parse relations response")?;
+      let count = users.len();
+      all.extend(users.into_iter().map(Into::into));
+      if count < 100 || page >= 200 {
+        break;
+      }
+      page += 1;
+    }
+    Ok(all)
+  }
+
+  pub async fn list_followers(&self) -> Result<Vec<SimpleUser>> {
+    self.list_all("/user/followers").await
+  }
+
+  pub async fn list_following(&self) -> Result<Vec<SimpleUser>> {
+    self.list_all("/user/following").await
+  }
+
+  /// Personnes suivies qui ne nous suivent pas en retour.
+  pub async fn get_not_followed_back(&self) -> Result<Vec<SimpleUser>> {
+    let (following, followers) = tokio::try_join!(self.list_following(), self.list_followers())?;
+    let follower_ids: HashSet<u64> = followers.iter().map(|u| u.id).collect();
+    Ok(
+      following
+        .into_iter()
+        .filter(|u| !follower_ids.contains(&u.id))
+        .collect(),
+    )
   }
 
   async fn wait_search_slot(&self) -> Result<()> {

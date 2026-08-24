@@ -37,6 +37,44 @@ async fn get_user(state: State<'_, AppState>, login: String) -> Result<User, Str
 }
 
 #[tauri::command]
+async fn get_me(state: State<'_, AppState>) -> Result<github::SimpleUser, String> {
+  state
+    .github
+    .get_authenticated_user()
+    .await
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn get_followers(state: State<'_, AppState>) -> Result<Vec<github::SimpleUser>, String> {
+  state
+    .github
+    .list_followers()
+    .await
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn get_following(state: State<'_, AppState>) -> Result<Vec<github::SimpleUser>, String> {
+  state
+    .github
+    .list_following()
+    .await
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn get_not_followed_back(
+  state: State<'_, AppState>,
+) -> Result<Vec<github::SimpleUser>, String> {
+  state
+    .github
+    .get_not_followed_back()
+    .await
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 fn is_authenticated(state: State<'_, AppState>) -> bool {
   state.github.is_authenticated()
 }
@@ -55,6 +93,10 @@ pub fn run() {
     .invoke_handler(tauri::generate_handler![
       search_users,
       get_user,
+      get_me,
+      get_followers,
+      get_following,
+      get_not_followed_back,
       is_authenticated
     ])
     .setup(|app| {

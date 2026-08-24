@@ -1,0 +1,49 @@
+<nav class="sidebar" role="navigation" aria-label="Navigation principale">
+  <button
+    type="button"
+    class="nav-btn"
+    [class.active]="activeView() === 'search'"
+    (click)="selectSearch($event)"
+    title="Recherche"
+    aria-label="Recherche"
+  >
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="11" cy="11" r="8" />
+      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+    </svg>
+  </button>
+
+  <div class="nav-group">
+    <button
+      type="button"
+      class="nav-btn"
+      [class.active]="isConnectionsActive()"
+      (click)="toggleConnections($event)"
+      title="Relations"
+      aria-label="Relations"
+      [attr.aria-expanded]="connectionsOpen()"
+    >
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+      </svg>
+    </button>
+
+    @if (connectionsOpen()) {
+      <div class="submenu" role="menu" aria-label="Sous-menu Relations">
+        <span class="submenu-title">Relations</span>
+        <button type="button" class="submenu-item" role="menuitem" [class.active]="activeView() === 'followers'" (click)="selectTab('followers')">
+          Followers
+        </button>
+        <button type="button" class="submenu-item" role="menuitem" [class.active]="activeView() === 'following'" (click)="selectTab('following')">
+          Following
+        </button>
+        <button type="button" class="submenu-item" role="menuitem" [class.active]="activeView() === 'management'" (click)="selectTab('management')">
+          Management
+        </button>
+      </div>
+    }
+  </div>
+</nav>

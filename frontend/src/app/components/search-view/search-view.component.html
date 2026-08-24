@@ -1,0 +1,152 @@
+<h1>Recherche de profils GitHub</h1>
+
+@if (github.checkingAuth()) {
+  <p class="auth-status">Vérification de l'authentification…</p>
+} @else if (!github.authenticated()) {
+  <p class="auth-status warning">
+    ⚠ Mode anonyme : rate limits très bas (10 req/min). Définis la variable
+    d'environnement <code>GITHUB_TOKEN</code> et relance l'application.
+  </p>
+}
+
+<form class="search-form" (ngSubmit)="search()">
+  <div class="field">
+    <label for="location">Pays / localisation</label>
+    <input id="location" type="text" [(ngModel)]="form.location" name="location" placeholder="Ex : France, Paris, Québec…" />
+  </div>
+
+  <div class="field">
+    <label for="min_repos">Repos min</label>
+    <input id="min_repos" type="number" min="0" [(ngModel)]="form.min_repos" name="min_repos" placeholder="Ex : 50" />
+  </div>
+
+  <div class="field">
+    <label for="max_repos">Repos max</label>
+    <input id="max_repos" type="number" min="0" [(ngModel)]="form.max_repos" name="max_repos" placeholder="Ex : 500" />
+  </div>
+
+  <div class="field">
+    <label for="min_followers">Followers min</label>
+    <input id="min_followers" type="number" min="0" [(ngModel)]="form.min_followers" name="min_followers" placeholder="Ex : 100" />
+  </div>
+
+  <div class="field">
+    <label for="max_followers">Followers max</label>
+    <input id="max_followers" type="number" min="0" [(ngModel)]="form.max_followers" name="max_followers" placeholder="Ex : 10000" />
+  </div>
+
+  <div class="field">
+    <label for="min_following">Following min</label>
+    <input id="min_following" type="number" min="0" [(ngModel)]="form.min_following" name="min_following" placeholder="Ex : 10" />
+  </div>
+
+  <div class="field">
+    <label for="max_following">Following max</label>
+    <input id="max_following" type="number" min="0" [(ngModel)]="form.max_following" name="max_following" placeholder="Ex : 1000" />
+  </div>
+
+  <div class="field">
+    <label for="last_activity">Dernière activité après (AAAA-MM-JJ)</label>
+    <input id="last_activity" type="text" [(ngModel)]="form.last_activity_after" name="last_activity_after" placeholder="Ex : 2025-01-01" pattern="\d{4}-\d{2}-\d{2}" />
+  </div>
+
+  <button type="submit" class="search-btn" [disabled]="loading()">
+    {{ loading() ? 'Recherche…' : 'Rechercher' }}
+  </button>
+</form>
+
+@if (error()) {
+  <p class="error">{{ error() }}</p>
+}
+
+@if (result(); as result) {
+  <div class="results-header">
+    <p>
+      {{ formatNumber(result.total_count) }} utilisateur(s) trouvé(s)
+      @if (result.remaining !== null) {
+        — rate limit restant : {{ result.remaining }}
+      }
+    </p>
+
+    @if (result.has_next || page() > 1) {
+      <div class="pagination">
+        <button (click)="previousPage()" [disabled]="page() <= 1 || loading()">← Précédent</button>
+        <span>Page {{ page() }}</span>
+        <button (click)="nextPage()" [disabled]="!result.has_next || loading()">Suivant →</button>
+      </div>
+    }
+  </div>
+
+  @if (result.partial) {
+    <p class="partial-warning">
+      ⚠ Détails des profils indisponibles (rate limit atteint). Liste partielle
+      affichée — login et avatar seulement.
+    </p>
+  }
+
+  @if (result.users.length === 0) {
+    <p class="empty">Aucun utilisateur ne correspond à ces critères.</p>
+  } @else {
+    <div class="user-grid">
+      @for (user of result.users; track user.id) {
+        <app-user-card [user]="user" (view)="viewUser($event)" />
+      }
+    </div>
+  }
+}
+
+@if (loading()) {
+  <div class="loading">
+    <div class="spinner"></div>
+    <p>Chargement des profils…</p>
+  </div>
+}
+
+@if (selectedUser(); as user) {
+  <div class="overlay" (click)="closeDetail()">
+    <aside class="detail-panel" (click)="$event.stopPropagation()">
+      <button class="close-btn" (click)="closeDetail()" aria-label="Fermer">✕</button>
+
+      <img [src]="user.avatar_url" [alt]="'Avatar de ' + user.login" class="detail-avatar" />
+      <h2>{{ user.name ?? user.login }}</h2>
+      <p class="detail-login">
+        <a [href]="user.html_url" target="_blank" rel="noopener">{{ user.login }}</a>
+      </p>
+
+      @if (user.bio) {
+        <p class="detail-bio">{{ user.bio }}</p>
+      }
+
+      @if (user.company) {
+        <p class="detail-meta">🏢 {{ user.company }}</p>
+      }
+      @if (user.location) {
+        <p class="detail-meta">📍 {{ user.location }}</p>
+      }
+
+      <div class="detail-stats">
+        <div class="detail-stat">
+          <span class="detail-stat-value">{{ formatNumber(user.public_repos) }}</span>
+          <span>Repos publics</span>
+        </div>
+        <div class="detail-stat">
+          <span class="detail-stat-value">{{ formatNumber(user.followers) }}</span>
+          <span>Followers</span>
+        </div>
+        <div class="detail-stat">
+          <span class="detail-stat-value">{{ formatNumber(user.following) }}</span>
+          <span>Following</span>
+        </div>
+      </div>
+
+      <div class="detail-meta">
+        <p>📅 Membre depuis : {{ formatDate(user.created_at) }}</p>
+        <p>⚡ Dernière activité : {{ formatDate(user.pushed_at) }}</p>
+      </div>
+
+      @if (detailLoading()) {
+        <p class="detail-loading">Chargement des détails…</p>
+      }
+    </aside>
+  </div>
+}

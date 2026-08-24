@@ -1,0 +1,105 @@
+:host {
+  --sidebar-bg: #1e1e2e;
+  --sidebar-fg: #cdd6f4;
+  --sidebar-border: #313244;
+  --sidebar-dropdown: #181825;
+}
+
+@media (prefers-color-scheme: light) {
+  :host {
+    --sidebar-bg: #eff1f5;
+    --sidebar-fg: #4c4f69;
+    --sidebar-border: #bcc0cc;
+    --sidebar-dropdown: #ffffff;
+  }
+}
+
+.sidebar {
+  position: fixed;
+  top: 36px;
+  bottom: 0;
+  left: 0;
+  width: 52px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 0;
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--sidebar-border);
+  z-index: 900;
+}
+
+.nav-group {
+  position: relative;
+}
+
+.nav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--sidebar-fg);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.nav-btn:hover {
+  background: rgba(137, 180, 250, 0.15);
+}
+
+.nav-btn.active {
+  background: rgba(137, 180, 250, 0.25);
+  color: #89b4fa;
+}
+
+.submenu {
+  position: absolute;
+  top: 0;
+  left: calc(100% + 6px);
+  min-width: 160px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--sidebar-dropdown);
+  border: 1px solid var(--border-color, #313244);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  z-index: 950;
+}
+
+.submenu-title {
+  padding: 6px 12px 4px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sidebar-fg);
+}
+
+.submenu-item {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--sidebar-fg);
+  font-size: 12px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+
+.submenu-item:hover {
+  background: rgba(137, 180, 250, 0.15);
+}
+
+.submenu-item.active {
+  background: rgba(137, 180, 250, 0.25);
+  color: #89b4fa;
+}

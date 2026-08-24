@@ -40,6 +40,15 @@ export interface SearchUsersResult {
   has_next: boolean;
 }
 
+export interface SimpleUser {
+  login: string;
+  id: number;
+  avatar_url: string;
+  html_url: string;
+}
+
+export type ConnectionTab = 'followers' | 'following' | 'management';
+
 @Injectable({ providedIn: 'root' })
 export class GithubService {
   readonly authenticated = signal(false);
@@ -65,5 +74,49 @@ export class GithubService {
 
   async getUser(login: string): Promise<User> {
     return invoke<User>('get_user', { login });
+  }
+
+  private meCache: SimpleUser | null = null;
+
+  async getMe(): Promise<SimpleUser> {
+    if (!this.meCache) {
+      this.meCache = await invoke<SimpleUser>('get_me');
+    }
+    return this.meCache;
+  }
+
+  async getFollowers(): Promise<SimpleUser[]> {
+    return this.cached('followers', () => invoke<SimpleUser[]>('get_followers'));
+  }
+
+  async getFollowing(): Promise<SimpleUser[]> {
+    return this.cached('following', () => invoke<SimpleUser[]>('get_following'));
+  }
+
+  async getNotFollowedBack(): Promise<SimpleUser[]> {
+    return this.cached('not_followed_back', () =>
+      invoke<SimpleUser[]>('get_not_followed_back'),
+    );
+  }
+
+  clearConnectionsCache(): void {
+    this.connectionsCache.clear();
+  }
+
+  private readonly connectionsCache = new Map<string, SimpleUser[]>();
+
+  private async cached(
+    key: string,
+    loader: () => Promise<SimpleUser[]>,
+  ): Promise<SimpleUser[]> {
+    if (!this.connectionsCache.has(key)) {
+      try {
+        this.connectionsCache.set(key, await loader());
+      } catch (e) {
+        this.connectionsCache.delete(key);
+        throw e;
+      }
+    }
+    return this.connectionsCache.get(key)!;
   }
 }
