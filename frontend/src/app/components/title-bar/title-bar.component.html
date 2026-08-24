@@ -12,7 +12,15 @@
     <div class="title-bar-center">
       <nav class="menu-bar" role="menubar">
         @for (menu of menus(); track menu.label) {
-          <div class="menu-item" role="menuitem" (click)="toggleMenu($event, menu)" (keydown.enter)="toggleMenu($event, menu)" tabindex="0">
+          <div
+            class="menu-item"
+            role="menuitem"
+            [class.disabled]="menu.disabled"
+            [attr.aria-disabled]="menu.disabled || null"
+            [tabindex]="menu.disabled ? -1 : 0"
+            (click)="toggleMenu($event, menu)"
+            (keydown.enter)="toggleMenu($event, menu)"
+          >
             {{ menu.label }}
             @if (menu.items && menu.items.length > 0) {
               <div class="dropdown" [class.open]="menu.open">

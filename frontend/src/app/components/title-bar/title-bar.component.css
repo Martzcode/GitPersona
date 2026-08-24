@@ -97,6 +97,16 @@
   background: rgba(91, 126, 166, 0.2);
 }
 
+.menu-item.disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.menu-item.disabled:hover,
+.menu-item.disabled:focus {
+  background: transparent;
+}
+
 .dropdown {
   position: absolute;
   top: 100%;

@@ -17,8 +17,8 @@ export class TitleBarComponent implements OnInit {
   protected readonly appName = signal('GitPersona');
   protected readonly isMaximized = signal(false);
   protected readonly menus = signal<MenuItem[]>([
-    { label: 'Fichier', items: [{ label: 'Nouveau', action: () => console.log('Nouveau') }, { label: 'Ouvrir', action: () => console.log('Ouvrir') }, { type: 'separator' }, { label: 'Quitter', action: () => this.close() }] },
-    { label: 'Édition', items: [{ label: 'Annuler', action: () => console.log('Annuler') }, { label: 'Rétablir', action: () => console.log('Rétablir') }] },
+    { label: 'Fichier', disabled: true, items: [{ label: 'Nouveau', action: () => console.log('Nouveau') }, { label: 'Ouvrir', action: () => console.log('Ouvrir') }, { type: 'separator' }, { label: 'Quitter', action: () => this.close() }] },
+    { label: 'Édition', disabled: true, items: [{ label: 'Annuler', action: () => console.log('Annuler') }, { label: 'Rétablir', action: () => console.log('Rétablir') }] },
     { label: 'Affichage', items: [{ label: 'Plein écran', action: () => this.toggleMaximize() }, { label: 'Redimensionner', action: () => console.log('Redimensionner') }] },
     { label: 'Paramètres', action: () => this.settingsRequested.emit() },
     { label: 'Aide', items: [{ label: 'Autorisations du token', action: () => this.tokenPermissionsRequested.emit() }, { type: 'separator' }, { label: 'À propos', action: () => this.aboutRequested.emit() }] },
@@ -42,6 +42,9 @@ export class TitleBarComponent implements OnInit {
 
   protected toggleMenu(event: Event, menu: MenuItem): void {
     event.stopPropagation();
+    if (menu.disabled) {
+      return;
+    }
     if (!menu.items || menu.items.length === 0) {
       menu.action?.();
       this.menus.update(menus => menus.map(m => ({ ...m, open: false })));
@@ -84,4 +87,5 @@ interface MenuItem {
   action?: () => void;
   type?: 'separator';
   open?: boolean;
+  disabled?: boolean;
 }
