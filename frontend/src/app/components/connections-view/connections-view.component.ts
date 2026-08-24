@@ -17,6 +17,7 @@ export class ConnectionsViewComponent {
   protected readonly me = signal<SimpleUser | null>(null);
   protected readonly confirming = signal<string | null>(null);
   protected readonly busyLogin = signal<string | null>(null);
+  protected readonly followedLogins = signal<Set<string>>(new Set());
 
   constructor(readonly github: GithubService) {
     effect(() => void this.load(this.tab()));
@@ -31,7 +32,7 @@ export class ConnectionsViewComponent {
       }
       const users =
         tab === 'followers'
-          ? await this.github.getFollowers()
+          ? await this.loadFollowers()
           : tab === 'following'
             ? await this.github.getFollowing()
             : await this.github.getNotFollowedBack();
@@ -42,6 +43,19 @@ export class ConnectionsViewComponent {
     } finally {
       this.loading.set(false);
     }
+  }
+
+  private async loadFollowers(): Promise<SimpleUser[]> {
+    const [followers, following] = await Promise.all([
+      this.github.getFollowers(),
+      this.github.getFollowing(),
+    ]);
+    this.followedLogins.set(new Set(following.map(u => u.login)));
+    return followers;
+  }
+
+  protected isFollowed(login: string): boolean {
+    return this.followedLogins().has(login);
   }
 
   protected toggleUnfollow(login: string): void {
@@ -64,6 +78,39 @@ export class ConnectionsViewComponent {
     try {
       await this.github.unfollowUser(login);
       this.users.update(list => (list ? list.filter(u => u.login !== login) : null));
+      this.followedLogins.update(set => {
+        const next = new Set(set);
+        next.delete(login);
+        return next;
+      });
+    } catch (e) {
+      this.error.set(String(e));
+    } finally {
+      this.busyLogin.set(null);
+      this.confirming.set(null);
+    }
+  }
+
+  protected toggleFollow(user: SimpleUser): void {
+    if (this.busyLogin()) return;
+    if (this.confirming() === user.login) {
+      void this.doFollow(user);
+      return;
+    }
+    this.confirming.set(user.login);
+    setTimeout(() => {
+      if (this.confirming() === user.login) {
+        this.confirming.set(null);
+      }
+    }, 3000);
+  }
+
+  private async doFollow(user: SimpleUser): Promise<void> {
+    this.busyLogin.set(user.login);
+    this.error.set(null);
+    try {
+      await this.github.followUser(user);
+      this.followedLogins.update(set => new Set(set).add(user.login));
     } catch (e) {
       this.error.set(String(e));
     } finally {

@@ -40,10 +40,30 @@
             <span class="login">{{ user.login }}</span>
             <a [href]="user.html_url" target="_blank" rel="noopener" class="profile-link">Voir le profil ↗</a>
           </div>
-          @if (tab() === 'management') {
+          @if (tab() === 'followers') {
+            @if (isFollowed(user.login)) {
+              <span class="followed-tag" title="Vous suivez déjà cette personne">✓ Suivi</span>
+            } @else {
+              <button
+                type="button"
+                class="action-btn follow-btn"
+                [class.confirm]="confirming() === user.login"
+                [disabled]="busyLogin() !== null"
+                (click)="toggleFollow(user)"
+              >
+                @if (busyLogin() === user.login) {
+                  …
+                } @else if (confirming() === user.login) {
+                  Confirmer ?
+                } @else {
+                  Suivre
+                }
+              </button>
+            }
+          } @else {
             <button
               type="button"
-              class="unfollow-btn"
+              class="action-btn unfollow-btn"
               [class.confirm]="confirming() === user.login"
               [disabled]="busyLogin() !== null"
               (click)="toggleUnfollow(user.login)"

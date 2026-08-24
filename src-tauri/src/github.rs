@@ -277,12 +277,24 @@ impl GitHubClient {
     self.token.read().expect("token lock poisoned").is_some()
   }
 
-  fn auth_get(&self, path: &str) -> reqwest::RequestBuilder {
-    let mut req = self.http.get(format!("{API_BASE}{path}"));
+  fn auth_request(&self, method: reqwest::Method, path: &str) -> reqwest::RequestBuilder {
+    let mut req = self.http.request(method, format!("{API_BASE}{path}"));
     if let Some(token) = self.current_token() {
       req = req.bearer_auth(token);
     }
     req
+  }
+
+  fn auth_get(&self, path: &str) -> reqwest::RequestBuilder {
+    self.auth_request(reqwest::Method::GET, path)
+  }
+
+  fn auth_put(&self, path: &str) -> reqwest::RequestBuilder {
+    self.auth_request(reqwest::Method::PUT, path)
+  }
+
+  fn auth_delete(&self, path: &str) -> reqwest::RequestBuilder {
+    self.auth_request(reqwest::Method::DELETE, path)
   }
 
   /// Profil de l'utilisateur authentifié (requiert un token).
@@ -355,17 +367,59 @@ impl GitHubClient {
     )
   }
 
+  /// Suivre un utilisateur (requiert user:follow en classic, ou
+  /// Followers: Read and write en fine-grained). 304 = déjà suivi.
+  pub async fn follow_user(&self, login: &str) -> Result<()> {
+    let resp = self
+      .auth_put(&format!("/user/following/{login}"))
+      .send()
+      .await
+      .context("follow request failed")?;
+
+    let status = resp.status();
+    if status.is_success() || status == reqwest::StatusCode::NOT_MODIFIED {
+      log::info!("follow de {login} effectué");
+      return Ok(());
+    }
+
+    if status == reqwest::StatusCode::FORBIDDEN {
+      let body = resp.text().await.unwrap_or_default();
+      if body.to_lowercase().contains("not allowed") || body.contains("scope") {
+        return Err(Self::follow_scope_error());
+      }
+      return Err(self.rate_limit_error(status, "erreur follow"));
+    }
+    if status == reqwest::StatusCode::TOO_MANY_REQUESTS {
+      return Err(self.rate_limit_error(status, "erreur follow"));
+    }
+    if status == reqwest::StatusCode::NOT_FOUND {
+      return Err(anyhow!("utilisateur introuvable : {login}"));
+    }
+
+    Err(anyhow!(
+      "impossible de suivre {login} (HTTP {})",
+      status.as_u16()
+    ))
+  }
+
+  fn follow_scope_error() -> anyhow::Error {
+    anyhow!(
+      "action refusée par GitHub : le token n'a pas le droit de follow \
+       (classique : scope user:follow ; fine-grained : Followers Read and write)"
+    )
+  }
+
   /// Ne plus suivre un utilisateur (requiert user:follow en classic, ou
   /// Followers: Read and write en fine-grained).
   pub async fn unfollow_user(&self, login: &str) -> Result<()> {
     let resp = self
-      .auth_get(&format!("/user/following/{login}"))
+      .auth_delete(&format!("/user/following/{login}"))
       .send()
       .await
       .context("unfollow request failed")?;
 
     let status = resp.status();
-    if status.is_success() {
+    if status.is_success() || status == reqwest::StatusCode::NOT_MODIFIED {
       log::info!("unfollow de {login} effectué");
       return Ok(());
     }
@@ -373,10 +427,7 @@ impl GitHubClient {
     if status == reqwest::StatusCode::FORBIDDEN {
       let body = resp.text().await.unwrap_or_default();
       if body.to_lowercase().contains("not allowed") || body.contains("scope") {
-        return Err(anyhow!(
-          "action refusée par GitHub : le token n'a pas le droit de follow \
-           (classique : scope user:follow ; fine-grained : Followers Read and write)"
-        ));
+        return Err(Self::follow_scope_error());
       }
       return Err(self.rate_limit_error(status, "erreur unfollow"));
     }

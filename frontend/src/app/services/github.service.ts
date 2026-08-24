@@ -104,14 +104,24 @@ export class GithubService {
     );
   }
 
-  async unfollowUser(login: string): Promise<void> {
-    await invoke('unfollow_user', { login });
-    this.removeFromConnectionsCache(login);
+  async followUser(user: SimpleUser): Promise<void> {
+    await invoke('follow_user', { login: user.login });
+    const following = this.connectionsCache.get('following');
+    if (following && !following.some(u => u.id === user.id)) {
+      this.connectionsCache.set('following', [user, ...following]);
+    }
   }
 
-  removeFromConnectionsCache(login: string): void {
-    for (const [key, users] of this.connectionsCache) {
-      this.connectionsCache.set(key, users.filter(u => u.login !== login));
+  async unfollowUser(login: string): Promise<void> {
+    await invoke('unfollow_user', { login });
+    this.removeFromCache('following', login);
+    this.removeFromCache('not_followed_back', login);
+  }
+
+  private removeFromCache(key: string, login: string): void {
+    const list = this.connectionsCache.get(key);
+    if (list) {
+      this.connectionsCache.set(key, list.filter(u => u.login !== login));
     }
   }
 

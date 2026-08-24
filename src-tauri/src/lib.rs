@@ -117,6 +117,15 @@ async fn get_not_followed_back(
 }
 
 #[tauri::command]
+async fn follow_user(state: State<'_, AppState>, login: String) -> Result<(), String> {
+  state
+    .github
+    .follow_user(&login)
+    .await
+    .map_err(|e| format!("{e:#}"))
+}
+
+#[tauri::command]
 async fn unfollow_user(state: State<'_, AppState>, login: String) -> Result<(), String> {
   state
     .github
@@ -179,6 +188,7 @@ pub fn run() {
       get_followers,
       get_following,
       get_not_followed_back,
+      follow_user,
       unfollow_user,
       is_authenticated,
       get_config,
