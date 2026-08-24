@@ -1,16 +1,16 @@
 .subtitle {
   margin: -1rem 0 1rem;
   font-size: 0.9rem;
-  color: var(--muted-color, #a6adc8);
+  color: var(--muted-color, #9aa0a6);
 }
 
 .auth-status.warning {
   padding: 0.75rem 1rem;
   border-radius: 8px;
   font-size: 0.85rem;
-  background: rgba(250, 179, 135, 0.12);
-  border: 1px solid rgba(250, 179, 135, 0.4);
-  color: #fab387;
+  background: rgba(194, 145, 92, 0.12);
+  border: 1px solid rgba(194, 145, 92, 0.4);
+  color: #c2915c;
   margin: 0 0 1rem;
 }
 
@@ -24,9 +24,9 @@
 .error {
   padding: 0.75rem 1rem;
   border-radius: 8px;
-  background: rgba(243, 139, 168, 0.12);
-  border: 1px solid rgba(243, 139, 168, 0.4);
-  color: #f38ba8;
+  background: rgba(176, 106, 106, 0.12);
+  border: 1px solid rgba(176, 106, 106, 0.4);
+  color: #b06a6a;
   font-size: 0.85rem;
   word-break: break-word;
 }
@@ -37,14 +37,14 @@
   align-items: center;
   gap: 0.75rem;
   padding: 3rem 0;
-  color: var(--muted-color, #a6adc8);
+  color: var(--muted-color, #9aa0a6);
 }
 
 .spinner {
   width: 36px;
   height: 36px;
-  border: 3px solid var(--border-color, #313244);
-  border-top-color: #89b4fa;
+  border: 3px solid var(--border-color, #303338);
+  border-top-color: #5b7ea6;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -67,12 +67,12 @@
 .results-header p {
   margin: 0;
   font-size: 0.9rem;
-  color: var(--muted-color, #a6adc8);
+  color: var(--muted-color, #9aa0a6);
 }
 
 .empty {
   text-align: center;
-  color: var(--muted-color, #a6adc8);
+  color: var(--muted-color, #9aa0a6);
   padding: 3rem 0;
 }
 
@@ -90,14 +90,14 @@
   align-items: center;
   gap: 0.75rem;
   padding: 0.75rem 1rem;
-  background: var(--card-bg, #181825);
-  border: 1px solid var(--border-color, #313244);
+  background: var(--card-bg, #1f2126);
+  border: 1px solid var(--border-color, #303338);
   border-radius: 10px;
   transition: border-color 0.15s ease;
 }
 
 .person:hover {
-  border-color: #89b4fa;
+  border-color: #5b7ea6;
 }
 
 .action-btn {
@@ -117,52 +117,52 @@
 }
 
 .follow-btn {
-  border: 1px solid rgba(166, 227, 161, 0.5);
+  border: 1px solid rgba(125, 162, 106, 0.5);
   background: transparent;
-  color: #a6e3a1;
+  color: #7da26a;
 }
 
 .follow-btn:hover:not(:disabled) {
-  background: rgba(166, 227, 161, 0.15);
+  background: rgba(125, 162, 106, 0.15);
 }
 
 .follow-btn.confirm {
-  background: #a6e3a1;
-  border-color: #a6e3a1;
-  color: #1e1e2e;
+  background: #7da26a;
+  border-color: #7da26a;
+  color: #f4f5f6;
   font-weight: 600;
 }
 
 .follow-btn.confirm:hover:not(:disabled) {
-  background: #b6e8b1;
+  background: #8bb079;
 }
 
 .unfollow-btn {
-  border: 1px solid rgba(243, 139, 168, 0.5);
+  border: 1px solid rgba(176, 106, 106, 0.5);
   background: transparent;
-  color: #f38ba8;
+  color: #b06a6a;
 }
 
 .unfollow-btn:hover:not(:disabled) {
-  background: rgba(243, 139, 168, 0.15);
+  background: rgba(176, 106, 106, 0.15);
 }
 
 .unfollow-btn.confirm {
-  background: #f38ba8;
-  border-color: #f38ba8;
-  color: #1e1e2e;
+  background: #b06a6a;
+  border-color: #b06a6a;
+  color: #f4f5f6;
   font-weight: 600;
 }
 
 .unfollow-btn.confirm:hover:not(:disabled) {
-  background: #eba0ac;
+  background: #bd7d7d;
 }
 
 .followed-tag {
   margin-left: auto;
   flex-shrink: 0;
   font-size: 0.75rem;
-  color: var(--muted-color, #a6adc8);
+  color: var(--muted-color, #9aa0a6);
 }
 
 .person.clickable {
@@ -193,7 +193,7 @@
 
 .profile-link {
   font-size: 0.78rem;
-  color: #89b4fa;
+  color: #5b7ea6;
   text-decoration: none;
 }
 

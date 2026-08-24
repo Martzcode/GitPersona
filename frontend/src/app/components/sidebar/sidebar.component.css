@@ -1,15 +1,15 @@
 :host {
-  --sidebar-bg: #1e1e2e;
-  --sidebar-fg: #cdd6f4;
-  --sidebar-border: #313244;
-  --sidebar-dropdown: #181825;
+  --sidebar-bg: #17181c;
+  --sidebar-fg: #d6d8dd;
+  --sidebar-border: #303338;
+  --sidebar-dropdown: #1f2126;
 }
 
 @media (prefers-color-scheme: light) {
   :host {
-    --sidebar-bg: #eff1f5;
-    --sidebar-fg: #4c4f69;
-    --sidebar-border: #bcc0cc;
+    --sidebar-bg: #f4f5f6;
+    --sidebar-fg: #2b2f36;
+    --sidebar-border: #d8dade;
     --sidebar-dropdown: #ffffff;
   }
 }
@@ -49,12 +49,12 @@
 }
 
 .nav-btn:hover {
-  background: rgba(137, 180, 250, 0.15);
+  background: rgba(91, 126, 166, 0.15);
 }
 
 .nav-btn.active {
-  background: rgba(137, 180, 250, 0.25);
-  color: #89b4fa;
+  background: rgba(91, 126, 166, 0.25);
+  color: #5b7ea6;
 }
 
 .submenu {
@@ -67,7 +67,7 @@
   flex-direction: column;
   gap: 2px;
   background: var(--sidebar-dropdown);
-  border: 1px solid var(--border-color, #313244);
+  border: 1px solid var(--border-color, #303338);
   border-radius: 8px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
   z-index: 950;
@@ -96,10 +96,10 @@
 }
 
 .submenu-item:hover {
-  background: rgba(137, 180, 250, 0.15);
+  background: rgba(91, 126, 166, 0.15);
 }
 
 .submenu-item.active {
-  background: rgba(137, 180, 250, 0.25);
-  color: #89b4fa;
+  background: rgba(91, 126, 166, 0.25);
+  color: #5b7ea6;
 }

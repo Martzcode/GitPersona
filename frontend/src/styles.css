@@ -14,10 +14,13 @@ h1 {
   margin: 0 0 1.5rem;
   font-size: 1.75rem;
   font-weight: 600;
-  background: linear-gradient(135deg, #89b4fa, #cba6f7);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #5b7ea6;
   word-wrap: break-word;
   overflow-wrap: break-word;
+}
+
+@media (prefers-color-scheme: light) {
+  h1 {
+    color: #3d5875;
+  }
 }

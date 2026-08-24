@@ -25,8 +25,8 @@
   overflow-y: auto;
   overflow-x: hidden;
   padding: 2rem;
-  background: var(--card-bg, #181825);
-  border-left: 1px solid var(--border-color, #313244);
+  background: var(--card-bg, #1f2126);
+  border-left: 1px solid var(--border-color, #303338);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -51,23 +51,23 @@
   height: 32px;
   border: none;
   border-radius: 8px;
-  background: var(--stat-bg, #1e1e2e);
-  color: var(--fg-color, #cdd6f4);
+  background: var(--stat-bg, #17181c);
+  color: var(--fg-color, #d6d8dd);
   font-size: 0.9rem;
   cursor: pointer;
   transition: background 0.15s ease;
 }
 
 .close-btn:hover {
-  background: #f38ba8;
-  color: #1e1e2e;
+  background: #b06a6a;
+  color: #f4f5f6;
 }
 
 .detail-avatar {
   width: 96px;
   height: 96px;
   border-radius: 50%;
-  border: 3px solid #89b4fa;
+  border: 3px solid #5b7ea6;
   margin-top: 1rem;
 }
 
@@ -81,7 +81,7 @@
 }
 
 .detail-login a {
-  color: #89b4fa;
+  color: #5b7ea6;
   text-decoration: none;
 }
 
@@ -92,7 +92,7 @@
 .detail-bio {
   text-align: center;
   font-size: 0.9rem;
-  color: var(--muted-color, #a6adc8);
+  color: var(--muted-color, #9aa0a6);
   margin: 0;
   word-wrap: break-word;
   overflow-wrap: break-word;
@@ -102,7 +102,7 @@
 .detail-meta {
   margin: 0;
   font-size: 0.85rem;
-  color: var(--muted-color, #a6adc8);
+  color: var(--muted-color, #9aa0a6);
   text-align: center;
   word-wrap: break-word;
   overflow-wrap: break-word;
@@ -123,16 +123,16 @@
   align-items: center;
   gap: 0.25rem;
   padding: 0.75rem 0.5rem;
-  background: var(--stat-bg, #1e1e2e);
+  background: var(--stat-bg, #17181c);
   border-radius: 10px;
   font-size: 0.75rem;
-  color: var(--muted-color, #a6adc8);
+  color: var(--muted-color, #9aa0a6);
 }
 
 .detail-stat-value {
   font-size: 1.2rem;
   font-weight: 700;
-  color: #89b4fa;
+  color: #5b7ea6;
 }
 
 .loading-inline {
@@ -142,8 +142,8 @@
 .spinner {
   width: 28px;
   height: 28px;
-  border: 3px solid var(--border-color, #313244);
-  border-top-color: #89b4fa;
+  border: 3px solid var(--border-color, #303338);
+  border-top-color: #5b7ea6;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -157,9 +157,9 @@
 .error {
   padding: 0.6rem 0.75rem;
   border-radius: 8px;
-  background: rgba(243, 139, 168, 0.12);
-  border: 1px solid rgba(243, 139, 168, 0.4);
-  color: #f38ba8;
+  background: rgba(176, 106, 106, 0.12);
+  border: 1px solid rgba(176, 106, 106, 0.4);
+  color: #b06a6a;
   font-size: 0.82rem;
   word-break: break-word;
 }

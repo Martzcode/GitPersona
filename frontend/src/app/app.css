@@ -4,8 +4,8 @@
   min-height: 100vh;
   max-width: 100%;
   overflow-x: hidden;
-  background: var(--bg-color, #1e1e2e);
-  color: var(--fg-color, #cdd6f4);
+  background: var(--bg-color, #17181c);
+  color: var(--fg-color, #d6d8dd);
   font-family: system-ui, -apple-system, sans-serif;
 }
 
@@ -26,13 +26,13 @@
 
 @media (prefers-color-scheme: light) {
   :host {
-    --bg-color: #eff1f5;
-    --fg-color: #4c4f69;
-    --border-color: #bcc0cc;
+    --bg-color: #f4f5f6;
+    --fg-color: #2b2f36;
+    --border-color: #d8dade;
     --card-bg: #ffffff;
     --input-bg: #ffffff;
-    --stat-bg: #eff1f5;
-    --placeholder-color: #8c8fa1;
-    --muted-color: #7287fd;
+    --stat-bg: #f4f5f6;
+    --placeholder-color: #83888f;
+    --muted-color: #666c75;
   }
 }
