@@ -1,0 +1,26 @@
+<div class="overlay" (click)="close.emit()">
+  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="about-title" (click)="$event.stopPropagation()">
+    <button class="close-btn" (click)="close.emit()" aria-label="Fermer">✕</button>
+
+    <div class="app-icon">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+      </svg>
+    </div>
+
+    <h2 id="about-title">GitPersona</h2>
+    @if (version()) {
+      <p class="version">Version {{ version() }}</p>
+    }
+
+    <p class="description">
+      Recherche et gestion de profils GitHub :
+      recherche avancée, followers, following et suivi des retours.
+    </p>
+
+    <div class="author">
+      <span>Développé par</span>
+      <a href="https://github.com/Martzcode" target="_blank" rel="noopener">Martzcode ↗</a>
+    </div>
+  </div>
+</div>

@@ -11,6 +11,7 @@ import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
 })
 export class TitleBarComponent implements OnInit {
   readonly settingsRequested = output<void>();
+  readonly aboutRequested = output<void>();
 
   protected readonly appName = signal('GitPersona');
   protected readonly isMaximized = signal(false);
@@ -19,7 +20,7 @@ export class TitleBarComponent implements OnInit {
     { label: 'Édition', items: [{ label: 'Annuler', action: () => console.log('Annuler') }, { label: 'Rétablir', action: () => console.log('Rétablir') }] },
     { label: 'Affichage', items: [{ label: 'Plein écran', action: () => this.toggleMaximize() }, { label: 'Redimensionner', action: () => console.log('Redimensionner') }] },
     { label: 'Paramètres', action: () => this.settingsRequested.emit() },
-    { label: 'Aide', items: [{ label: 'À propos', action: () => console.log('À propos') }] },
+    { label: 'Aide', items: [{ label: 'À propos', action: () => this.aboutRequested.emit() }] },
   ]);
 
   private window = getCurrentWebviewWindow();
