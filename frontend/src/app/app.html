@@ -1,4 +1,4 @@
-<app-title-bar (settingsRequested)="settingsOpen.set(true)" (aboutRequested)="aboutOpen.set(true)" />
+<app-title-bar (settingsRequested)="settingsOpen.set(true)" (aboutRequested)="aboutOpen.set(true)" (tokenPermissionsRequested)="tokenPermissionsOpen.set(true)" />
 
 <div class="app-shell">
   <app-sidebar [activeView]="activeView()" (navigate)="onNavigate($event)" />
@@ -27,4 +27,8 @@
 
 @if (aboutOpen()) {
   <app-about-dialog (close)="aboutOpen.set(false)" />
+}
+
+@if (tokenPermissionsOpen()) {
+  <app-token-permissions-dialog (close)="tokenPermissionsOpen.set(false)" />
 }

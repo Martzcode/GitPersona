@@ -1,0 +1,62 @@
+<div class="overlay" (click)="close.emit()">
+  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="perms-title" (click)="$event.stopPropagation()">
+    <button class="close-btn" type="button" (click)="close.emit()" aria-label="Fermer">✕</button>
+
+    <h2 id="perms-title">Autorisations du token GitHub</h2>
+    <p class="intro">
+      Deux types de tokens sont acceptés dans les paramètres.
+      Voici ce dont l'application a besoin selon le type choisi.
+    </p>
+
+    <section>
+      <h3>Token classic <code>(ghp_…)</code></h3>
+      <ul class="perm-list">
+        <li>
+          <span class="badge read">Lecture seule</span>
+          <div>
+            <strong>Aucun scope requis</strong>
+            <p>Recherche de profils, consultation des profils publics, liste de vos followers et following.</p>
+          </div>
+        </li>
+        <li>
+          <span class="badge write">Écriture</span>
+          <div>
+            <strong><code>user:follow</code></strong>
+            <p>Nécessaire pour suivre ou ne plus suivre quelqu'un depuis les vues Followers, Following et Management.</p>
+          </div>
+        </li>
+        <li class="avoid">
+          <span class="badge avoid-badge">À éviter</span>
+          <div>
+            <strong><code>repo</code></strong>
+            <p>Donne accès à tous vos dépôts privés : inutile pour GitPersona.</p>
+          </div>
+        </li>
+      </ul>
+    </section>
+
+    <section>
+      <h3>Fine-grained <code>(github_pat_…)</code></h3>
+      <ul class="perm-list">
+        <li>
+          <span class="badge read">Lecture seule</span>
+          <div>
+            <strong>Account permissions → Followers → Read</strong>
+            <p>Suffisant pour toutes les vues en lecture.</p>
+          </div>
+        </li>
+        <li>
+          <span class="badge write">Écriture</span>
+          <div>
+            <strong>Account permissions → Followers → Read and write</strong>
+            <p>Pour les actions Suivre / Ne plus suivre.</p>
+          </div>
+        </li>
+      </ul>
+      <p class="note">
+        Sans le droit d'écriture, les boutons Suivre / Ne plus suivre
+        renverront une erreur refusée par GitHub.
+      </p>
+    </section>
+  </div>
+</div>
