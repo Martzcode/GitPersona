@@ -1,0 +1,82 @@
+<div class="overlay" (click)="close.emit()">
+  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="settings-title" (click)="$event.stopPropagation()">
+    <h2 id="settings-title">Paramètres</h2>
+    <p class="dialog-hint">
+      Ces informations sont enregistrées dans <code>config.json</code>,
+      à côté de l'exécutable.
+    </p>
+
+    @if (loading()) {
+      <p class="status">Chargement de la configuration…</p>
+    } @else {
+      <form (ngSubmit)="save()">
+        <div class="field">
+          <label for="settings-username">Nom d'utilisateur GitHub</label>
+          <input
+            id="settings-username"
+            type="text"
+            [(ngModel)]="username"
+            name="username"
+            placeholder="Ex : octocat"
+            autocomplete="off"
+          />
+        </div>
+
+        <div class="field">
+          <label for="settings-token">Token GitHub</label>
+          <div class="token-row">
+            <input
+              id="settings-token"
+              [type]="showToken() ? 'text' : 'password'"
+              [(ngModel)]="token"
+              name="token"
+              placeholder="ghp_…"
+              autocomplete="off"
+            />
+            <button
+              type="button"
+              class="toggle-btn"
+              (click)="showToken.set(!showToken())"
+              [title]="showToken() ? 'Masquer' : 'Afficher'"
+              [attr.aria-label]="showToken() ? 'Masquer le token' : 'Afficher le token'"
+            >
+              @if (showToken()) {
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+                  <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+                  <line x1="1" y1="1" x2="23" y2="23" />
+                </svg>
+              } @else {
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              }
+            </button>
+          </div>
+          <span class="field-hint">
+            Un token avec les scopes <code>repo</code> / <code>read:user</code>
+            augmente fortement les limites d'API.
+          </span>
+        </div>
+
+        @if (error()) {
+          <p class="error">{{ error() }}</p>
+        }
+
+        @if (saved()) {
+          <p class="saved">✓ Configuration enregistrée</p>
+        }
+
+        <div class="actions">
+          <button type="button" class="btn-secondary" (click)="close.emit()" [disabled]="saving()">
+            Annuler
+          </button>
+          <button type="submit" class="btn-primary" [disabled]="saving()">
+            {{ saving() ? 'Enregistrement…' : 'Enregistrer' }}
+          </button>
+        </div>
+      </form>
+    }
+  </div>
+</div>

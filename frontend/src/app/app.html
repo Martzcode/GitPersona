@@ -1,4 +1,4 @@
-<app-title-bar />
+<app-title-bar (settingsRequested)="settingsOpen.set(true)" />
 
 <div class="app-shell">
   <app-sidebar [activeView]="activeView()" (navigate)="onNavigate($event)" />
@@ -20,3 +20,7 @@
     }
   </main>
 </div>
+
+@if (settingsOpen()) {
+  <app-settings-dialog (close)="settingsOpen.set(false)" />
+}

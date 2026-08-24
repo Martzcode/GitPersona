@@ -14,7 +14,7 @@ const CONCURRENCY_ANONYMOUS: usize = 4;
 
 pub struct GitHubClient {
   http: reqwest::Client,
-  token: Option<String>,
+  token: std::sync::RwLock<Option<String>>,
   search_limiter: Mutex<()>,
   last_search: Mutex<Option<std::time::Instant>>,
 }
@@ -258,19 +258,28 @@ impl GitHubClient {
 
     Self {
       http,
-      token,
+      token: std::sync::RwLock::new(token),
       search_limiter: Mutex::new(()),
       last_search: Mutex::new(None),
     }
   }
 
+  pub fn set_token(&self, token: Option<String>) {
+    *self.token.write().expect("token lock poisoned") = token;
+    log::info!("GitHub token mis à jour ({})", if self.is_authenticated() { "actif" } else { "anonyme" });
+  }
+
+  fn current_token(&self) -> Option<String> {
+    self.token.read().expect("token lock poisoned").clone()
+  }
+
   pub fn is_authenticated(&self) -> bool {
-    self.token.is_some()
+    self.token.read().expect("token lock poisoned").is_some()
   }
 
   fn auth_get(&self, path: &str) -> reqwest::RequestBuilder {
     let mut req = self.http.get(format!("{API_BASE}{path}"));
-    if let Some(token) = &self.token {
+    if let Some(token) = self.current_token() {
       req = req.bearer_auth(token);
     }
     req
@@ -364,7 +373,7 @@ impl GitHubClient {
     {
       anyhow!(
         "API GitHub saturée (rate limit). {} : attendez un peu ou définissez GITHUB_TOKEN.",
-        if self.token.is_none() {
+        if !self.is_authenticated() {
           "Mode anonyme actif (60 req/h)"
         } else {
           "Token actif"
@@ -379,7 +388,7 @@ impl GitHubClient {
   pub async fn search_users(&self, criteria: &SearchCriteria) -> Result<SearchUsersResult> {
     self.wait_search_slot().await?;
 
-    if self.token.is_some() {
+    if self.is_authenticated() {
       match self.search_graphql(criteria).await {
         Ok(result) => return Ok(result),
         Err(e) => log::warn!("GraphQL search failed ({e:#}); falling back to REST"),
@@ -391,8 +400,7 @@ impl GitHubClient {
 
   async fn search_graphql(&self, criteria: &SearchCriteria) -> Result<SearchUsersResult> {
     let token = self
-      .token
-      .as_ref()
+      .current_token()
       .ok_or_else(|| anyhow!("token requis pour GraphQL"))?;
 
     let body = serde_json::json!({
@@ -482,7 +490,7 @@ impl GitHubClient {
   async fn search_rest(&self, criteria: &SearchCriteria) -> Result<SearchUsersResult> {
     let query = build_query(criteria);
     let mut per_page = criteria.per_page.unwrap_or(30).clamp(1, 100);
-    if self.token.is_none() {
+    if !self.is_authenticated() {
       per_page = per_page.min(10);
     }
     let page = criteria.page.unwrap_or(1);
@@ -495,7 +503,7 @@ impl GitHubClient {
         ("per_page", per_page.to_string().as_str()),
         ("page", page.to_string().as_str()),
       ]);
-    if let Some(token) = &self.token {
+    if let Some(token) = self.current_token() {
       req = req.bearer_auth(token);
     }
 
@@ -552,7 +560,7 @@ impl GitHubClient {
 
   async fn core_rate_limit_remaining(&self) -> Option<u32> {
     let mut req = self.http.get(format!("{API_BASE}/rate_limit"));
-    if let Some(token) = &self.token {
+    if let Some(token) = self.current_token() {
       req = req.bearer_auth(token);
     }
     let resp = req.send().await.ok()?;
@@ -562,7 +570,7 @@ impl GitHubClient {
 
   pub async fn get_user(&self, login: &str) -> Result<User> {
     let mut req = self.http.get(format!("{API_BASE}/users/{login}"));
-    if let Some(token) = &self.token {
+    if let Some(token) = self.current_token() {
       req = req.bearer_auth(token);
     }
     let resp = req
@@ -581,7 +589,7 @@ impl GitHubClient {
   /// Récupère les profils avec concurrence limitée et arrêt immédiat en cas
   /// de rate limit (évite les rate limits secondaires de GitHub).
   async fn fetch_profiles(&self, items: &[SearchItem]) -> HashMap<String, User> {
-    let concurrency = if self.token.is_some() {
+    let concurrency = if self.is_authenticated() {
       CONCURRENCY_WITH_TOKEN
     } else {
       CONCURRENCY_ANONYMOUS
@@ -590,7 +598,7 @@ impl GitHubClient {
     let semaphore = Arc::new(Semaphore::new(concurrency));
     let aborted = Arc::new(AtomicBool::new(false));
     let http = self.http.clone();
-    let token = self.token.clone();
+    let token = self.current_token();
 
     let mut tasks = tokio::task::JoinSet::new();
     for item in items {

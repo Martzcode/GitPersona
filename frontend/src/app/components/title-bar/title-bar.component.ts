@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
 
@@ -10,12 +10,15 @@ import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
   styleUrl: './title-bar.component.css',
 })
 export class TitleBarComponent implements OnInit {
+  readonly settingsRequested = output<void>();
+
   protected readonly appName = signal('GitPersona');
   protected readonly isMaximized = signal(false);
   protected readonly menus = signal<MenuItem[]>([
     { label: 'Fichier', items: [{ label: 'Nouveau', action: () => console.log('Nouveau') }, { label: 'Ouvrir', action: () => console.log('Ouvrir') }, { type: 'separator' }, { label: 'Quitter', action: () => this.close() }] },
     { label: 'Édition', items: [{ label: 'Annuler', action: () => console.log('Annuler') }, { label: 'Rétablir', action: () => console.log('Rétablir') }] },
     { label: 'Affichage', items: [{ label: 'Plein écran', action: () => this.toggleMaximize() }, { label: 'Redimensionner', action: () => console.log('Redimensionner') }] },
+    { label: 'Paramètres', action: () => this.settingsRequested.emit() },
     { label: 'Aide', items: [{ label: 'À propos', action: () => console.log('À propos') }] },
   ]);
 
@@ -37,10 +40,13 @@ export class TitleBarComponent implements OnInit {
 
   protected toggleMenu(event: Event, menu: MenuItem): void {
     event.stopPropagation();
-    if (menu.items && menu.items.length > 0) {
-      menu.open = !menu.open;
-      this.menus.update(menus => menus.map(m => m === menu ? { ...m, open: menu.open } : { ...m, open: false }));
+    if (!menu.items || menu.items.length === 0) {
+      menu.action?.();
+      this.menus.update(menus => menus.map(m => ({ ...m, open: false })));
+      return;
     }
+    menu.open = !menu.open;
+    this.menus.update(menus => menus.map(m => m === menu ? { ...m, open: menu.open } : { ...m, open: false }));
   }
 
   private async checkMaximized(): Promise<void> {

@@ -49,6 +49,11 @@ export interface SimpleUser {
 
 export type ConnectionTab = 'followers' | 'following' | 'management';
 
+export interface AppConfig {
+  github_username: string;
+  token: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class GithubService {
   readonly authenticated = signal(false);
@@ -101,6 +106,17 @@ export class GithubService {
 
   clearConnectionsCache(): void {
     this.connectionsCache.clear();
+    this.meCache = null;
+  }
+
+  async getConfig(): Promise<AppConfig> {
+    return invoke<AppConfig>('get_config');
+  }
+
+  async saveConfig(config: AppConfig): Promise<void> {
+    await invoke('save_config', { config });
+    this.clearConnectionsCache();
+    await this.checkAuth();
   }
 
   private readonly connectionsCache = new Map<string, SimpleUser[]>();
