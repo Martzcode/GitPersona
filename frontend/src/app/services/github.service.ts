@@ -104,6 +104,17 @@ export class GithubService {
     );
   }
 
+  async unfollowUser(login: string): Promise<void> {
+    await invoke('unfollow_user', { login });
+    this.removeFromConnectionsCache(login);
+  }
+
+  removeFromConnectionsCache(login: string): void {
+    for (const [key, users] of this.connectionsCache) {
+      this.connectionsCache.set(key, users.filter(u => u.login !== login));
+    }
+  }
+
   clearConnectionsCache(): void {
     this.connectionsCache.clear();
     this.meCache = null;

@@ -15,6 +15,8 @@ export class ConnectionsViewComponent {
   protected readonly error = signal<string | null>(null);
   protected readonly users = signal<SimpleUser[] | null>(null);
   protected readonly me = signal<SimpleUser | null>(null);
+  protected readonly confirming = signal<string | null>(null);
+  protected readonly busyLogin = signal<string | null>(null);
 
   constructor(readonly github: GithubService) {
     effect(() => void this.load(this.tab()));
@@ -39,6 +41,34 @@ export class ConnectionsViewComponent {
       this.users.set(null);
     } finally {
       this.loading.set(false);
+    }
+  }
+
+  protected toggleUnfollow(login: string): void {
+    if (this.busyLogin()) return;
+    if (this.confirming() === login) {
+      void this.doUnfollow(login);
+      return;
+    }
+    this.confirming.set(login);
+    setTimeout(() => {
+      if (this.confirming() === login) {
+        this.confirming.set(null);
+      }
+    }, 3000);
+  }
+
+  private async doUnfollow(login: string): Promise<void> {
+    this.busyLogin.set(login);
+    this.error.set(null);
+    try {
+      await this.github.unfollowUser(login);
+      this.users.update(list => (list ? list.filter(u => u.login !== login) : null));
+    } catch (e) {
+      this.error.set(String(e));
+    } finally {
+      this.busyLogin.set(null);
+      this.confirming.set(null);
     }
   }
 

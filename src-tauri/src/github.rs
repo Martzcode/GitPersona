@@ -355,6 +355,44 @@ impl GitHubClient {
     )
   }
 
+  /// Ne plus suivre un utilisateur (requiert user:follow en classic, ou
+  /// Followers: Read and write en fine-grained).
+  pub async fn unfollow_user(&self, login: &str) -> Result<()> {
+    let resp = self
+      .auth_get(&format!("/user/following/{login}"))
+      .send()
+      .await
+      .context("unfollow request failed")?;
+
+    let status = resp.status();
+    if status.is_success() {
+      log::info!("unfollow de {login} effectué");
+      return Ok(());
+    }
+
+    if status == reqwest::StatusCode::FORBIDDEN {
+      let body = resp.text().await.unwrap_or_default();
+      if body.to_lowercase().contains("not allowed") || body.contains("scope") {
+        return Err(anyhow!(
+          "action refusée par GitHub : le token n'a pas le droit de follow \
+           (classique : scope user:follow ; fine-grained : Followers Read and write)"
+        ));
+      }
+      return Err(self.rate_limit_error(status, "erreur unfollow"));
+    }
+    if status == reqwest::StatusCode::TOO_MANY_REQUESTS {
+      return Err(self.rate_limit_error(status, "erreur unfollow"));
+    }
+    if status == reqwest::StatusCode::NOT_FOUND {
+      return Err(anyhow!("utilisateur introuvable : {login}"));
+    }
+
+    Err(anyhow!(
+      "impossible de ne plus suivre {login} (HTTP {})",
+      status.as_u16()
+    ))
+  }
+
   async fn wait_search_slot(&self) -> Result<()> {
     let _guard = self.search_limiter.lock().await;
     let mut last = self.last_search.lock().await;

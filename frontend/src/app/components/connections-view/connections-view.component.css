@@ -100,6 +100,40 @@
   border-color: #89b4fa;
 }
 
+.unfollow-btn {
+  margin-left: auto;
+  flex-shrink: 0;
+  padding: 0.4rem 0.8rem;
+  border: 1px solid rgba(243, 139, 168, 0.5);
+  border-radius: 6px;
+  background: transparent;
+  color: #f38ba8;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.1s ease;
+}
+
+.unfollow-btn:hover:not(:disabled) {
+  background: rgba(243, 139, 168, 0.15);
+}
+
+.unfollow-btn.confirm {
+  background: #f38ba8;
+  border-color: #f38ba8;
+  color: #1e1e2e;
+  font-weight: 600;
+}
+
+.unfollow-btn.confirm:hover:not(:disabled) {
+  background: #eba0ac;
+}
+
+.unfollow-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .avatar {
   width: 40px;
   height: 40px;

@@ -40,6 +40,23 @@
             <span class="login">{{ user.login }}</span>
             <a [href]="user.html_url" target="_blank" rel="noopener" class="profile-link">Voir le profil ↗</a>
           </div>
+          @if (tab() === 'management') {
+            <button
+              type="button"
+              class="unfollow-btn"
+              [class.confirm]="confirming() === user.login"
+              [disabled]="busyLogin() !== null"
+              (click)="toggleUnfollow(user.login)"
+            >
+              @if (busyLogin() === user.login) {
+                …
+              } @else if (confirming() === user.login) {
+                Confirmer ?
+              } @else {
+                Ne plus suivre
+              }
+            </button>
+          }
         </li>
       }
     </ul>

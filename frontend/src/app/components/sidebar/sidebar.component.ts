@@ -31,7 +31,7 @@ export class SidebarComponent {
     event.stopPropagation();
     if (!this.isConnectionsActive()) {
       this.navigate.emit('followers');
-      this.connectionsOpen.set(false);
+      this.connectionsOpen.set(true);
       return;
     }
     this.connectionsOpen.update(open => !open);
