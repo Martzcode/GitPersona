@@ -102,51 +102,6 @@
   </div>
 }
 
-@if (selectedUser(); as user) {
-  <div class="overlay" (click)="closeDetail()">
-    <aside class="detail-panel" (click)="$event.stopPropagation()">
-      <button class="close-btn" (click)="closeDetail()" aria-label="Fermer">✕</button>
-
-      <img [src]="user.avatar_url" [alt]="'Avatar de ' + user.login" class="detail-avatar" />
-      <h2>{{ user.name ?? user.login }}</h2>
-      <p class="detail-login">
-        <a [href]="user.html_url" target="_blank" rel="noopener">{{ user.login }}</a>
-      </p>
-
-      @if (user.bio) {
-        <p class="detail-bio">{{ user.bio }}</p>
-      }
-
-      @if (user.company) {
-        <p class="detail-meta">🏢 {{ user.company }}</p>
-      }
-      @if (user.location) {
-        <p class="detail-meta">📍 {{ user.location }}</p>
-      }
-
-      <div class="detail-stats">
-        <div class="detail-stat">
-          <span class="detail-stat-value">{{ formatNumber(user.public_repos) }}</span>
-          <span>Repos publics</span>
-        </div>
-        <div class="detail-stat">
-          <span class="detail-stat-value">{{ formatNumber(user.followers) }}</span>
-          <span>Followers</span>
-        </div>
-        <div class="detail-stat">
-          <span class="detail-stat-value">{{ formatNumber(user.following) }}</span>
-          <span>Following</span>
-        </div>
-      </div>
-
-      <div class="detail-meta">
-        <p>📅 Membre depuis : {{ formatDate(user.created_at) }}</p>
-        <p>⚡ Dernière activité : {{ formatDate(user.pushed_at) }}</p>
-      </div>
-
-      @if (detailLoading()) {
-        <p class="detail-loading">Chargement des détails…</p>
-      }
-    </aside>
-  </div>
+@if (selectedLogin(); as login) {
+  <app-user-profile [login]="login" (close)="closeDetail()" />
 }

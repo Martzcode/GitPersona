@@ -165,6 +165,10 @@
   color: var(--muted-color, #a6adc8);
 }
 
+.person.clickable {
+  cursor: pointer;
+}
+
 .avatar {
   width: 40px;
   height: 40px;

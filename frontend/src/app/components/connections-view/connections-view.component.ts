@@ -1,10 +1,11 @@
 import { Component, effect, input, signal } from '@angular/core';
 import { ConnectionTab, GithubService, SimpleUser } from '../../services/github.service';
+import { UserProfileComponent } from '../user-profile/user-profile.component';
 
 @Component({
   selector: 'app-connections-view',
   standalone: true,
-  imports: [],
+  imports: [UserProfileComponent],
   templateUrl: './connections-view.component.html',
   styleUrl: './connections-view.component.css',
 })
@@ -18,6 +19,7 @@ export class ConnectionsViewComponent {
   protected readonly confirming = signal<string | null>(null);
   protected readonly busyLogin = signal<string | null>(null);
   protected readonly followedLogins = signal<Set<string>>(new Set());
+  protected readonly selectedUser = signal<SimpleUser | null>(null);
 
   constructor(readonly github: GithubService) {
     effect(() => void this.load(this.tab()));
@@ -56,6 +58,11 @@ export class ConnectionsViewComponent {
 
   protected isFollowed(login: string): boolean {
     return this.followedLogins().has(login);
+  }
+
+  protected openProfile(user: SimpleUser): void {
+    if (this.busyLogin()) return;
+    this.selectedUser.set(user);
   }
 
   protected toggleUnfollow(login: string): void {

@@ -1,6 +1,7 @@
 import { Component, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { UserCardComponent } from '../user-card/user-card.component';
+import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { GithubService, SearchCriteria, SearchUsersResult, User } from '../../services/github.service';
 
 interface CriteriaForm {
@@ -17,7 +18,7 @@ interface CriteriaForm {
 @Component({
   selector: 'app-search-view',
   standalone: true,
-  imports: [FormsModule, UserCardComponent],
+  imports: [FormsModule, UserCardComponent, UserProfileComponent],
   templateUrl: './search-view.component.html',
   styleUrl: './search-view.component.css',
 })
@@ -37,8 +38,7 @@ export class SearchViewComponent {
   protected readonly error = signal<string | null>(null);
   protected readonly result = signal<SearchUsersResult | null>(null);
   protected readonly page = signal(1);
-  protected readonly selectedUser = signal<User | null>(null);
-  protected readonly detailLoading = signal(false);
+  protected readonly selectedLogin = signal<string | null>(null);
   private readonly cursors: (string | undefined)[] = [];
 
   constructor(readonly github: GithubService) {}
@@ -50,7 +50,7 @@ export class SearchViewComponent {
     }
     this.loading.set(true);
     this.error.set(null);
-    this.selectedUser.set(null);
+    this.selectedLogin.set(null);
 
     if (this.form.last_activity_after && !/^\d{4}-\d{2}-\d{2}$/.test(this.form.last_activity_after)) {
       this.error.set('Format de date invalide. Utilise AAAA-MM-JJ (ex : 2025-01-01).');
@@ -95,32 +95,15 @@ export class SearchViewComponent {
     await this.search(false);
   }
 
-  protected async viewUser(user: User): Promise<void> {
-    this.selectedUser.set(user);
-    this.detailLoading.set(true);
-    try {
-      this.selectedUser.set(await this.github.getUser(user.login));
-    } catch (e) {
-      this.error.set(String(e));
-    } finally {
-      this.detailLoading.set(false);
-    }
+  protected viewUser(user: User): void {
+    this.selectedLogin.set(user.login);
   }
 
   protected closeDetail(): void {
-    this.selectedUser.set(null);
+    this.selectedLogin.set(null);
   }
 
   protected formatNumber(n: number): string {
     return new Intl.NumberFormat('fr-FR').format(n);
-  }
-
-  protected formatDate(date: string | null): string {
-    if (!date) return '—';
-    return new Date(date).toLocaleDateString('fr-FR', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
   }
 }

@@ -1,0 +1,56 @@
+<div class="overlay" (click)="close.emit()">
+  <aside class="detail-panel" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+    <button class="close-btn" (click)="close.emit()" aria-label="Fermer">✕</button>
+
+    <img
+      [src]="profile()?.avatar_url || avatarUrl"
+      [alt]="'Avatar de ' + login"
+      class="detail-avatar"
+    />
+    <h2>{{ profile()?.name ?? login }}</h2>
+    <p class="detail-login">
+      <a [href]="profile()?.html_url || 'https://github.com/' + login" target="_blank" rel="noopener">{{ login }}</a>
+    </p>
+
+    @if (loading()) {
+      <div class="loading-inline"><div class="spinner"></div></div>
+    }
+
+    @if (error(); as err) {
+      <p class="error">{{ err }}</p>
+    }
+
+    @if (profile(); as u) {
+      @if (u.bio) {
+        <p class="detail-bio">{{ u.bio }}</p>
+      }
+
+      @if (u.company) {
+        <p class="detail-meta">🏢 {{ u.company }}</p>
+      }
+      @if (u.location) {
+        <p class="detail-meta">📍 {{ u.location }}</p>
+      }
+
+      <div class="detail-stats">
+        <div class="detail-stat">
+          <span class="detail-stat-value">{{ formatNumber(u.public_repos) }}</span>
+          <span>Repos publics</span>
+        </div>
+        <div class="detail-stat">
+          <span class="detail-stat-value">{{ formatNumber(u.followers) }}</span>
+          <span>Followers</span>
+        </div>
+        <div class="detail-stat">
+          <span class="detail-stat-value">{{ formatNumber(u.following) }}</span>
+          <span>Following</span>
+        </div>
+      </div>
+
+      <div class="detail-meta">
+        <p>📅 Membre depuis : {{ formatDate(u.created_at) }}</p>
+        <p>⚡ Dernière activité : {{ formatDate(u.pushed_at) }}</p>
+      </div>
+    }
+  </aside>
+</div>

@@ -34,11 +34,11 @@
   } @else {
     <ul class="people-list">
       @for (user of users; track user.id) {
-        <li class="person">
+        <li class="person clickable" (click)="openProfile(user)">
           <img [src]="user.avatar_url" [alt]="'Avatar de ' + user.login" class="avatar" loading="lazy" />
           <div class="person-info">
             <span class="login">{{ user.login }}</span>
-            <a [href]="user.html_url" target="_blank" rel="noopener" class="profile-link">Voir le profil ↗</a>
+            <span class="profile-link">Voir le profil ↗</span>
           </div>
           @if (tab() === 'followers') {
             @if (isFollowed(user.login)) {
@@ -49,7 +49,7 @@
                 class="action-btn follow-btn"
                 [class.confirm]="confirming() === user.login"
                 [disabled]="busyLogin() !== null"
-                (click)="toggleFollow(user)"
+                (click)="$event.stopPropagation(); toggleFollow(user)"
               >
                 @if (busyLogin() === user.login) {
                   …
@@ -66,7 +66,7 @@
               class="action-btn unfollow-btn"
               [class.confirm]="confirming() === user.login"
               [disabled]="busyLogin() !== null"
-              (click)="toggleUnfollow(user.login)"
+              (click)="$event.stopPropagation(); toggleUnfollow(user.login)"
             >
               @if (busyLogin() === user.login) {
                 …
@@ -81,4 +81,8 @@
       }
     </ul>
   }
+}
+
+@if (selectedUser(); as selected) {
+  <app-user-profile [login]="selected.login" [avatarUrl]="selected.avatar_url" (close)="selectedUser.set(null)" />
 }
