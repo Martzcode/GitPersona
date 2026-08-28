@@ -5,7 +5,7 @@ A desktop application for GitHub user discovery and follower/following relations
 ## Why GitPersona?
 
 - **Discover GitHub users worldwide** — search and filter accounts by location, repository count, follower/following ranges, and last activity date to find developers that match your criteria.
-- **Track your followers and following** — monitor who follows you back and who doesn't, with a dedicated view that identifies users who follow you then unfollow after a follow-back. This lets you clean up your network and avoid one-sided connections.
+- **Track your followers and following** — monitor who follows you back and who doesn't, with a dedicated view that identifies users who follow you then unfollow after a follow-back, inflating their followers/following ratio. This lets you spot dishonest profiles and keep your network genuine.
 
 ## Features
 
