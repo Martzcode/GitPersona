@@ -31,7 +31,10 @@ A desktop application for GitHub user discovery and follower/following relations
 npm install
 
 # Run in development
-npm run dev
+npm run tauri dev
+
+# Build
+npm run tauri build
 ```
 
 ## Configuration
